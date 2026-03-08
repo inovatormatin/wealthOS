@@ -1,7 +1,14 @@
 import { useEffect, useState, useMemo } from "react";
 import { Plus, Pencil, Trash2, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
-import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from "../lib/categories";
+import {
+  INCOME_CATEGORIES,
+  EXPENSE_CATEGORIES,
+  INVESTMENT_CATEGORIES,
+  SAVINGS_CATEGORIES,
+} from "../lib/categories";
 import TransactionModal from "../components/TransactionModal";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { useToast } from "../context/ToastContext";
 import api from "../lib/api";
 
 function formatINR(amount) {
@@ -37,8 +44,10 @@ function formatDate(dateStr) {
 }
 
 export default function Transactions() {
+  const toast = useToast();
   const [allTxs, setAllTxs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [refresh, setRefresh] = useState(0);
 
   const [filters, setFilters] = useState({
@@ -48,20 +57,21 @@ export default function Transactions() {
   });
 
   const [modal, setModal] = useState(null); // null | "add" | tx object (edit)
-  const [deletingId, setDeletingId] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null); // tx id to delete
 
   const monthOptions = useMemo(() => getMonthOptions(), []);
   const allCategories = useMemo(
-    () => ["all", ...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES],
+    () => ["all", ...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES, ...INVESTMENT_CATEGORIES, ...SAVINGS_CATEGORIES],
     []
   );
 
   useEffect(() => {
     setLoading(true);
+    setFetchError(false);
     api
       .get("/transactions")
       .then(({ data }) => setAllTxs(data))
-      .catch(() => {})
+      .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
   }, [refresh]);
 
@@ -72,42 +82,57 @@ export default function Transactions() {
       .filter((t) => filters.category === "all" || t.category === filters.category);
   }, [allTxs, filters]);
 
-  const totalIncome = filtered
-    .filter((t) => t.type === "income")
-    .reduce((s, t) => s + t.amount, 0);
-  const totalExpenses = filtered
-    .filter((t) => t.type === "expense")
-    .reduce((s, t) => s + t.amount, 0);
+  const totalIncome = filtered.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+  const totalExpenses = filtered.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+  const totalInvestment = filtered.filter((t) => t.type === "investment").reduce((s, t) => s + t.amount, 0);
+  const totalSavings = filtered.filter((t) => t.type === "savings").reduce((s, t) => s + t.amount, 0);
 
   // Category-wise summary for current filter
   const categoryBreakdown = useMemo(() => {
     const map = {};
     filtered.forEach((t) => {
-      if (!map[t.category]) map[t.category] = { income: 0, expense: 0 };
-      map[t.category][t.type === "income" ? "income" : "expense"] += t.amount;
+      if (!map[t.category]) map[t.category] = { total: 0, type: t.type };
+      map[t.category].total += t.amount;
     });
     return Object.entries(map)
-      .map(([cat, vals]) => ({ category: cat, ...vals }))
-      .sort((a, b) => b.expense + b.income - (a.expense + a.income));
+      .map(([category, { total, type }]) => ({ category, total, type }))
+      .sort((a, b) => b.total - a.total);
   }, [filtered]);
 
+  const categoryBreakdownTotal = categoryBreakdown.reduce((s, c) => s + c.total, 0);
+
   async function handleDelete(id) {
-    if (!window.confirm("Delete this transaction?")) return;
     try {
       await api.delete(`/transactions/${id}`);
       setRefresh((r) => r + 1);
+      toast.success("Transaction deleted");
     } catch {
-      alert("Failed to delete");
+      toast.error("Failed to delete transaction");
     }
   }
 
   function handleSaved() {
     setModal(null);
     setRefresh((r) => r + 1);
+    toast.success(modal === "add" ? "Transaction added" : "Transaction updated");
+  }
+
+  if (fetchError) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-4 text-center px-4">
+        <p className="text-gray-500 text-sm">Failed to load transactions. Check your connection.</p>
+        <button
+          onClick={() => setRefresh((r) => r + 1)}
+          className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-lg transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    );
   }
 
   return (
-    <div className="px-8 py-8 max-w-5xl mx-auto">
+    <div className="px-4 py-6 sm:px-8 sm:py-8 max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -138,18 +163,24 @@ export default function Transactions() {
         </select>
 
         {/* Type tabs */}
-        <div className="flex rounded-lg border border-gray-200 bg-white p-1">
-          {["all", "income", "expense"].map((t) => (
+        <div className="flex rounded-lg border border-gray-200 bg-white p-1 flex-wrap gap-0.5">
+          {[
+            { key: "all",        label: "All" },
+            { key: "income",     label: "Income" },
+            { key: "expense",    label: "Expense" },
+            { key: "investment", label: "Invest" },
+            { key: "savings",    label: "Savings" },
+          ].map(({ key, label }) => (
             <button
-              key={t}
-              onClick={() => setFilters((f) => ({ ...f, type: t }))}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md capitalize transition-colors ${
-                filters.type === t
+              key={key}
+              onClick={() => setFilters((f) => ({ ...f, type: key }))}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                filters.type === key
                   ? "bg-gray-900 text-white"
                   : "text-gray-500 hover:text-gray-800"
               }`}
             >
-              {t === "all" ? "All" : t === "income" ? "Income" : "Expenses"}
+              {label}
             </button>
           ))}
         </div>
@@ -161,14 +192,15 @@ export default function Transactions() {
           className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
           <option value="all">All Categories</option>
-          {[...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES].map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
+          <optgroup label="Income">{INCOME_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</optgroup>
+          <optgroup label="Expense">{EXPENSE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</optgroup>
+          <optgroup label="Investment">{INVESTMENT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</optgroup>
+          <optgroup label="Savings">{SAVINGS_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</optgroup>
         </select>
       </div>
 
       {/* Summary Strip */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
         <div className="bg-green-50 rounded-xl px-4 py-3 flex items-center gap-3">
           <ArrowUpCircle className="w-5 h-5 text-green-600 shrink-0" />
           <div>
@@ -179,23 +211,22 @@ export default function Transactions() {
         <div className="bg-red-50 rounded-xl px-4 py-3 flex items-center gap-3">
           <ArrowDownCircle className="w-5 h-5 text-red-500 shrink-0" />
           <div>
-            <p className="text-xs text-red-600 font-medium">Expenses</p>
+            <p className="text-xs text-red-600 font-medium">Expense</p>
             <p className="text-base font-bold text-red-700">{formatINR(totalExpenses)}</p>
           </div>
         </div>
-        <div className={`rounded-xl px-4 py-3 flex items-center gap-3 ${
-          totalIncome - totalExpenses >= 0 ? "bg-blue-50" : "bg-orange-50"
-        }`}>
-          <div className={`w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-xs font-bold ${
-            totalIncome - totalExpenses >= 0 ? "bg-blue-200 text-blue-700" : "bg-orange-200 text-orange-700"
-          }`}>=</div>
+        <div className="bg-blue-50 rounded-xl px-4 py-3 flex items-center gap-3">
+          <ArrowUpCircle className="w-5 h-5 text-blue-500 shrink-0" />
           <div>
-            <p className={`text-xs font-medium ${
-              totalIncome - totalExpenses >= 0 ? "text-blue-700" : "text-orange-700"
-            }`}>Net</p>
-            <p className={`text-base font-bold ${
-              totalIncome - totalExpenses >= 0 ? "text-blue-800" : "text-orange-800"
-            }`}>{formatINR(totalIncome - totalExpenses)}</p>
+            <p className="text-xs text-blue-700 font-medium">Investment</p>
+            <p className="text-base font-bold text-blue-800">{formatINR(totalInvestment)}</p>
+          </div>
+        </div>
+        <div className="bg-amber-50 rounded-xl px-4 py-3 flex items-center gap-3">
+          <ArrowUpCircle className="w-5 h-5 text-amber-500 shrink-0" />
+          <div>
+            <p className="text-xs text-amber-700 font-medium">Savings</p>
+            <p className="text-base font-bold text-amber-800">{formatINR(totalSavings)}</p>
           </div>
         </div>
       </div>
@@ -224,11 +255,17 @@ export default function Transactions() {
                   <li key={tx.id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 group transition-colors">
                     {/* Type indicator */}
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                      tx.type === "income" ? "bg-green-100" : "bg-red-100"
+                      tx.type === "income"     ? "bg-green-100" :
+                      tx.type === "expense"    ? "bg-red-100"   :
+                      tx.type === "investment" ? "bg-blue-100"  : "bg-amber-100"
                     }`}>
                       {tx.type === "income"
                         ? <ArrowUpCircle className="w-4 h-4 text-green-600" />
-                        : <ArrowDownCircle className="w-4 h-4 text-red-500" />
+                        : tx.type === "expense"
+                        ? <ArrowDownCircle className="w-4 h-4 text-red-500" />
+                        : tx.type === "investment"
+                        ? <ArrowUpCircle className="w-4 h-4 text-blue-500" />
+                        : <ArrowUpCircle className="w-4 h-4 text-amber-500" />
                       }
                     </div>
 
@@ -245,7 +282,9 @@ export default function Transactions() {
 
                     {/* Amount */}
                     <span className={`text-sm font-semibold shrink-0 ${
-                      tx.type === "income" ? "text-green-600" : "text-red-500"
+                      tx.type === "income"     ? "text-green-600" :
+                      tx.type === "expense"    ? "text-red-500"   :
+                      tx.type === "investment" ? "text-blue-600"  : "text-amber-600"
                     }`}>
                       {tx.type === "income" ? "+" : "−"}{formatINR(tx.amount)}
                     </span>
@@ -259,7 +298,7 @@ export default function Transactions() {
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => handleDelete(tx.id)}
+                        onClick={() => setConfirmDelete(tx.id)}
                         className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -279,17 +318,21 @@ export default function Transactions() {
             <p className="text-sm text-gray-400 text-center py-8">No data</p>
           ) : (
             <ul className="space-y-3">
-              {categoryBreakdown.map(({ category, income, expense }) => (
+              {categoryBreakdown.map(({ category, total, type }) => (
                 <li key={category}>
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-xs font-medium text-gray-700">{category}</span>
-                    <span className="text-xs text-gray-500">{formatINR(expense || income)}</span>
+                    <span className="text-xs text-gray-500">{formatINR(total)}</span>
                   </div>
                   <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${expense ? "bg-red-400" : "bg-green-500"}`}
+                      className={`h-full rounded-full ${
+                        type === "income"     ? "bg-green-500" :
+                        type === "expense"    ? "bg-red-400"   :
+                        type === "investment" ? "bg-blue-400"  : "bg-amber-400"
+                      }`}
                       style={{
-                        width: `${Math.min(100, ((expense || income) / (totalExpenses || totalIncome || 1)) * 100).toFixed(0)}%`,
+                        width: `${Math.min(100, (total / (categoryBreakdownTotal || 1)) * 100).toFixed(0)}%`,
                       }}
                     />
                   </div>
@@ -306,6 +349,18 @@ export default function Transactions() {
           tx={modal === "add" ? null : modal}
           onClose={() => setModal(null)}
           onSaved={handleSaved}
+        />
+      )}
+
+      {/* Confirm Delete */}
+      {confirmDelete && (
+        <ConfirmDialog
+          message="Delete this transaction? This cannot be undone."
+          onConfirm={() => {
+            handleDelete(confirmDelete);
+            setConfirmDelete(null);
+          }}
+          onCancel={() => setConfirmDelete(null)}
         />
       )}
     </div>
