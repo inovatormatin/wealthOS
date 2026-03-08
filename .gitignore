@@ -13,6 +13,7 @@ build/
 **/dist/
 **/build/
 frontend/.vite/
+CLAUDE.md
 
 # ── Firebase ──────────────────────────────────────────────────────────────────
 *-firebase-adminsdk-*.json
