@@ -6,17 +6,18 @@ import {
   Settings,
   LogOut,
   TrendingUp,
+  X,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 const NAV = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", ready: true },
   { to: "/transactions", icon: ArrowLeftRight, label: "Transactions", ready: true },
-  { to: "/portfolio", icon: PieChart, label: "Portfolio", ready: false },
-  { to: "/settings", icon: Settings, label: "Settings", ready: false },
+  { to: "/portfolio", icon: PieChart, label: "Portfolio", ready: true },
+  { to: "/settings", icon: Settings, label: "Settings", ready: true },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ onClose }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -32,13 +33,19 @@ export default function Sidebar() {
   return (
     <aside className="w-60 shrink-0 h-screen bg-white border-r border-gray-100 flex flex-col">
       {/* Brand */}
-      <div className="px-5 py-5 border-b border-gray-100">
+      <div className="px-5 py-5 border-b border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
             <TrendingUp className="w-4 h-4 text-white" />
           </div>
           <span className="text-base font-bold text-gray-900 tracking-tight">WealthOS</span>
         </div>
+        <button
+          onClick={onClose}
+          className="lg:hidden p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Nav */}
@@ -48,6 +55,7 @@ export default function Sidebar() {
             <NavLink
               key={to}
               to={to}
+              onClick={onClose}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   isActive

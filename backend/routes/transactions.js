@@ -42,7 +42,7 @@ router.get("/dashboard", authenticate, async (req, res) => {
       cashFlow.push({
         month: label,
         inflow: monthTxs.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),
-        outflow: monthTxs.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0),
+        outflow: monthTxs.filter((t) => ["expense", "investment", "savings"].includes(t.type)).reduce((s, t) => s + t.amount, 0),
       });
     }
 
@@ -90,8 +90,8 @@ router.post("/", authenticate, async (req, res) => {
   if (!type || !category || !amount || !date) {
     return res.status(400).json({ error: "type, category, amount and date are required" });
   }
-  if (!["income", "expense"].includes(type)) {
-    return res.status(400).json({ error: "type must be income or expense" });
+  if (!["income", "expense", "investment", "savings"].includes(type)) {
+    return res.status(400).json({ error: "type must be income, expense, investment, or savings" });
   }
   if (Number(amount) <= 0) {
     return res.status(400).json({ error: "amount must be positive" });

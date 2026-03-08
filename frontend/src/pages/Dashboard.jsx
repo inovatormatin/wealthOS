@@ -38,21 +38,31 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [dashData, setDashData] = useState(null);
+  const [portfolioSummary, setPortfolioSummary] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [fetchKey, setFetchKey] = useState(0);
 
   useEffect(() => {
-    Promise.all([api.get("/user/profile"), api.get("/transactions/dashboard")])
-      .then(([profileRes, dashRes]) => {
+    setLoading(true);
+    setError(false);
+    Promise.all([
+      api.get("/user/profile"),
+      api.get("/transactions/dashboard"),
+      api.get("/holdings/summary"),
+    ])
+      .then(([profileRes, dashRes, holdingsRes]) => {
         if (!profileRes.data.onboarded) {
           navigate("/onboarding", { replace: true });
           return;
         }
         setProfile(profileRes.data);
         setDashData(dashRes.data);
+        setPortfolioSummary(holdingsRes.data);
       })
-      .catch(() => {})
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, [navigate]);
+  }, [navigate, fetchKey]);
 
   if (loading) {
     return (
@@ -62,8 +72,22 @@ export default function Dashboard() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-4 text-center px-4">
+        <p className="text-gray-500 text-sm">Failed to load dashboard. Check your connection.</p>
+        <button
+          onClick={() => setFetchKey((k) => k + 1)}
+          className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-lg transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   const { income = 0, expenses = 0, netSavings = 0 } = dashData?.currentMonth || {};
-  const portfolioValue = 0; // Sprint 4
+  const portfolioValue = portfolioSummary?.totalCurrentValue || 0;
 
   const stats = [
     {
@@ -105,11 +129,11 @@ export default function Dashboard() {
 
   const cashFlowData = dashData?.cashFlow || [];
   const expenseBreakdown = dashData?.expenseBreakdown || [];
-  const portfolioData = []; // Sprint 4
+  const portfolioData = portfolioSummary?.portfolioData || [];
   const totalExpenses = expenseBreakdown.reduce((s, c) => s + c.amount, 0);
 
   return (
-    <div className="px-8 py-8 max-w-6xl mx-auto">
+    <div className="px-4 py-6 sm:px-8 sm:py-8 max-w-6xl mx-auto">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">
