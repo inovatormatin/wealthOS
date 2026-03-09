@@ -12,7 +12,14 @@ async function getUserTransactions(uid) {
     .collection("transactions")
     .orderBy("date", "desc")
     .get();
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Secondary sort by createdAt so same-date transactions appear newest first
+  return docs.sort((a, b) => {
+    if (a.date !== b.date) return 0; // already sorted by date from Firestore
+    const aTime = a.createdAt?._seconds ?? 0;
+    const bTime = b.createdAt?._seconds ?? 0;
+    return bTime - aTime;
+  });
 }
 
 // GET /api/transactions/dashboard  — MUST be before /:id

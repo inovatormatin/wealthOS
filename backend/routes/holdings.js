@@ -2,6 +2,7 @@ const express = require("express");
 const { db, admin } = require("../lib/firebase");
 const authenticate = require("../middleware/authenticate");
 const { fetchStockPrice } = require("../lib/priceService");
+const { trackYahooFinanceCall, trackAlphaVantageCall, trackClaudeAPICall } = require("../lib/usageTracker");
 
 const router = express.Router();
 
@@ -71,6 +72,11 @@ router.post("/refresh-prices", authenticate, async (req, res) => {
 
         const result = await fetchStockPrice(holding.ticker);
         if (!result) return { id: doc.id, ticker: holding.ticker, status: "failed" };
+
+        // Track which price source was used
+        if (result.source === "yahoo") trackYahooFinanceCall();
+        else if (result.source === "alpha_vantage") trackAlphaVantageCall();
+        else if (result.source === "ai") trackClaudeAPICall(0);
 
         await doc.ref.update({
           current_price: result.price,

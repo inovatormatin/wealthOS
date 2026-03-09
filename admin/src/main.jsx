@@ -2,18 +2,18 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
-import { ToastProvider } from "./context/ToastContext";
 import App from "./App";
 import "./index.css";
 
+// Strip trailing slash from BASE_URL for basename
+const basename = import.meta.env.BASE_URL.replace(/\/$/, "") || "/";
+
 createRoot(document.getElementById("root")).render(
-  // <StrictMode>
-    <BrowserRouter>
+  <StrictMode>
+    <BrowserRouter basename={basename}>
       <AuthProvider>
-        <ToastProvider>
-          <App />
-        </ToastProvider>
+        <App />
       </AuthProvider>
     </BrowserRouter>
-  // </StrictMode>
+  </StrictMode>
 );
