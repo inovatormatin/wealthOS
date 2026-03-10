@@ -7,6 +7,7 @@ import {
   ScrollText,
   Shield,
   LogOut,
+  ScanSearch,
 } from "lucide-react";
 
 const NAV = [
@@ -15,6 +16,7 @@ const NAV = [
   { to: "/api-usage", label: "API Usage", icon: Activity },
   { to: "/logs", label: "Logs", icon: ScrollText },
   { to: "/free-tier", label: "Free Tier", icon: Shield },
+  { to: "/screener", label: "Screener", icon: ScanSearch },
 ];
 
 export default function AdminLayout() {

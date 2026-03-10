@@ -6,6 +6,7 @@ const userRoutes = require("./routes/user");
 const transactionRoutes = require("./routes/transactions");
 const holdingRoutes = require("./routes/holdings");
 const adminRoutes = require("./routes/admin");
+const screenerRoutes = require("./routes/screener");
 const apiLogger = require("./middleware/apiLogger");
 
 const app = express();
@@ -33,6 +34,8 @@ app.use("/api/user", userRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/holdings", holdingRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/screener", screenerRoutes);
+app.use("/api/admin/screener", screenerRoutes);
 
 // Health check
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));

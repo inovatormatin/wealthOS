@@ -45,4 +45,8 @@ function trackClaudeAPICall(tokensUsed = 0) {
   safeIncrement({ claude_api_calls_today: 1, claude_tokens_used_today: tokensUsed });
 }
 
-module.exports = { trackAlphaVantageCall, trackYahooFinanceCall, trackClaudeAPICall };
+function trackScreenerTokens(tokensUsed = 0) {
+  safeIncrement({ screener_tokens_today: tokensUsed });
+}
+
+module.exports = { trackAlphaVantageCall, trackYahooFinanceCall, trackClaudeAPICall, trackScreenerTokens };

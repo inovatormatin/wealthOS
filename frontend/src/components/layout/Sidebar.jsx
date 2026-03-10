@@ -7,6 +7,7 @@ import {
   LogOut,
   TrendingUp,
   X,
+  Star,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -14,6 +15,7 @@ const NAV = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", ready: true },
   { to: "/transactions", icon: ArrowLeftRight, label: "Transactions", ready: true },
   { to: "/portfolio", icon: PieChart, label: "Portfolio", ready: true },
+  { to: "/screener", icon: Star, label: "Top Picks", ready: true },
   { to: "/settings", icon: Settings, label: "Settings", ready: true },
 ];
 
