@@ -7,6 +7,7 @@ import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import Portfolio from "./pages/Portfolio";
 import Settings from "./pages/Settings";
+import Screener from "./pages/Screener";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./components/layout/AppLayout";
 
@@ -60,6 +61,16 @@ export default function App() {
           <ProtectedRoute>
             <AppLayout>
               <Settings />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/screener"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <Screener />
             </AppLayout>
           </ProtectedRoute>
         }

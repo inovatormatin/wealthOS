@@ -7,6 +7,7 @@ import Users from "./pages/Users";
 import ApiUsage from "./pages/ApiUsage";
 import Logs from "./pages/Logs";
 import FreeTierStatus from "./pages/FreeTierStatus";
+import ScreenerControl from "./pages/ScreenerControl";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="api-usage" element={<ApiUsage />} />
         <Route path="logs" element={<Logs />} />
         <Route path="free-tier" element={<FreeTierStatus />} />
+        <Route path="screener" element={<ScreenerControl />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
