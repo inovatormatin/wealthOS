@@ -355,12 +355,10 @@ export default function Transactions() {
       {/* Confirm Delete */}
       {confirmDelete && (
         <ConfirmDialog
+          open={!!confirmDelete}
           message="Delete this transaction? This cannot be undone."
-          onConfirm={() => {
-            handleDelete(confirmDelete);
-            setConfirmDelete(null);
-          }}
-          onCancel={() => setConfirmDelete(null)}
+          onConfirm={() => handleDelete(confirmDelete)}
+          onClose={() => setConfirmDelete(null)}
         />
       )}
     </div>

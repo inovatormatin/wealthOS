@@ -53,7 +53,9 @@ api.interceptors.response.use(
       } catch (refreshErr) {
         processPending(refreshErr);
         window.__wealthos_admin_token__ = null;
-        window.location.href = import.meta.env.BASE_URL + "login";
+        // Fire event instead of hard reload — AuthContext sets user=null,
+        // ProtectedRoute redirects to /login via React Router (no page reload).
+        window.dispatchEvent(new CustomEvent("admin:session-expired"));
         return Promise.reject(refreshErr);
       } finally {
         isRefreshing = false;

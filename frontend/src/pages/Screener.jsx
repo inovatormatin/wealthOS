@@ -48,68 +48,135 @@ function timeAgo(iso) {
   return `${days} days ago`;
 }
 
+function valuationBadgeStyle(view) {
+  if (!view) return "bg-gray-100 text-gray-600";
+  const v = view.toLowerCase();
+  if (v.includes("undervalued")) return "bg-green-100 text-green-700";
+  if (v.includes("fairly")) return "bg-blue-100 text-blue-700";
+  if (v.includes("premium")) return "bg-yellow-100 text-yellow-700";
+  return "bg-gray-100 text-gray-600";
+}
+
+function Metric({ label, value }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-gray-400 text-xs mb-0.5">{label}</p>
+      <p className="text-gray-800 text-sm font-medium leading-snug">{value ?? "—"}</p>
+    </div>
+  );
+}
+
 function CompanyCard({ company, sectorColorMap }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-start gap-3">
-          <span className="bg-gray-900 text-white text-xs font-bold w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-            #{company.rank}
-          </span>
-          <div>
-            <h3 className="text-gray-900 font-bold text-lg leading-tight">{company.name}</h3>
-            <p className="text-gray-400 text-sm font-mono">{company.ticker}</p>
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 hover:shadow-md transition-shadow flex flex-col gap-4">
+
+      {/* ── Header ── */}
+      <div className="flex items-start gap-3">
+        <span className="bg-gray-900 text-white text-xs font-bold w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+          #{company.rank}
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2 flex-wrap">
+            <div className="min-w-0">
+              <h3 className="text-gray-900 font-bold text-base leading-tight truncate">
+                {company.name}
+              </h3>
+              <p className="text-gray-400 text-xs font-mono mt-0.5">{company.ticker}</p>
+            </div>
+            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+              <span
+                className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${getSectorColor(
+                  company.sector,
+                  sectorColorMap
+                )}`}
+              >
+                {company.sector}
+              </span>
+              {company.market_cap && (
+                <span className="text-gray-400 text-xs">{company.market_cap}</span>
+              )}
+            </div>
           </div>
         </div>
-        <span
-          className={`text-xs font-semibold px-2.5 py-1 rounded-full ${getSectorColor(
-            company.sector,
-            sectorColorMap
-          )}`}
-        >
-          {company.sector}
+      </div>
+
+      {/* ── Macro theme ── */}
+      {company.macro_theme && (
+        <span className="self-start inline-flex text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-full leading-tight">
+          {company.macro_theme}
         </span>
-      </div>
+      )}
 
-      {/* Metrics row */}
-      <div className="grid grid-cols-4 gap-2 mb-4">
-        {[
-          { label: "Rev Growth", value: company.revenue_growth },
-          { label: "ROE", value: company.roe },
-          { label: "ROCE", value: company.roce },
-          { label: "D/E", value: company.debt_to_equity },
-        ].map(({ label, value }) => (
-          <div key={label} className="bg-gray-50 rounded-xl px-3 py-2.5 text-center">
-            <p className="text-gray-400 text-xs mb-0.5">{label}</p>
-            <p className="text-gray-900 font-semibold text-sm">{value}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Score bar */}
-      <div className="mb-4">
+      {/* ── ARTHA Score ── */}
+      <div>
         <div className="flex justify-between items-center mb-1.5">
-          <span className="text-gray-500 text-xs">AI Confidence Score</span>
+          <span className="text-gray-500 text-xs">ARTHA Score</span>
           <span className={`text-xs font-bold ${scoreTextColor(company.score)}`}>
             {company.score}/100
           </span>
         </div>
         <div className="w-full bg-gray-100 rounded-full h-1.5">
           <div
-            className={`${scoreColor(company.score)} h-1.5 rounded-full transition-all duration-700`}
+            className={`${scoreColor(company.score)} h-1.5 rounded-full`}
             style={{ width: `${company.score}%` }}
           />
         </div>
       </div>
 
-      {/* Why picked */}
-      <div className="bg-gray-50 rounded-xl px-4 py-3 mb-3">
-        <p className="text-gray-500 text-xs font-medium mb-1">Why picked</p>
-        <p className="text-gray-700 text-sm leading-relaxed">{company.why}</p>
+      {/* ── Core metrics — 2×2 grid ── */}
+      <div className="grid grid-cols-2 gap-x-6 gap-y-3 bg-gray-50 rounded-xl p-4">
+        <Metric label="Revenue Growth" value={company.revenue_growth} />
+        <Metric label="ROE" value={company.roe} />
+        <Metric label="ROCE" value={company.roce} />
+        <Metric label="Debt / Equity" value={company.debt_to_equity} />
       </div>
 
-      {/* Data as of */}
+      {/* ── Valuation row ── */}
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="min-w-0">
+          <p className="text-gray-400 text-xs mb-0.5">P/E</p>
+          <p className="text-gray-800 text-sm font-medium">{company.pe_ratio ?? "—"}</p>
+        </div>
+        <div className="min-w-0">
+          <p className="text-gray-400 text-xs mb-0.5">PEG</p>
+          <p className="text-gray-800 text-sm font-medium">{company.peg_ratio ?? "—"}</p>
+        </div>
+        {company.valuation_view && (
+          <span
+            className={`text-xs font-semibold px-2.5 py-1 rounded-full ${valuationBadgeStyle(
+              company.valuation_view
+            )}`}
+          >
+            {company.valuation_view}
+          </span>
+        )}
+      </div>
+
+      {/* ── PAT trend ── */}
+      {company.pat_trend && (
+        <p className="text-gray-500 text-xs">
+          <span className="font-medium text-gray-600">PAT: </span>
+          {company.pat_trend}
+        </p>
+      )}
+
+      {/* ── Bull / Bear case ── */}
+      <div className="space-y-2">
+        <div className="bg-green-50 border border-green-100 rounded-xl px-4 py-3">
+          <p className="text-green-700 text-xs font-semibold mb-1">Bull case</p>
+          <p className="text-gray-700 text-sm leading-relaxed">
+            {company.bull_case ?? company.why}
+          </p>
+        </div>
+        {company.bear_case && (
+          <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+            <p className="text-red-600 text-xs font-semibold mb-1">Bear case / risk</p>
+            <p className="text-gray-700 text-sm leading-relaxed">{company.bear_case}</p>
+          </div>
+        )}
+      </div>
+
+      {/* ── Data as of ── */}
       <p className="text-gray-400 text-xs">Data: {company.data_as_of}</p>
     </div>
   );
