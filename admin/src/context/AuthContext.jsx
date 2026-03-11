@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import axios from "axios";
 import api from "../lib/api";
 
 const AuthContext = createContext(null);
@@ -7,15 +8,14 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // On mount, try to restore session via refresh token cookie
+  // On mount, try to restore session via refresh token cookie.
+  // Uses raw axios — not the api instance — so the interceptor never touches this call.
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await api.post("/auth/refresh");
+        const { data } = await axios.post("/api/auth/refresh", {}, { withCredentials: true });
         window.__wealthos_admin_token__ = data.accessToken;
-
-        // Verify superadmin role
-        await api.get("/admin/stats");
+        await api.get("/admin/stats"); // verify superadmin
         setUser(data.user);
       } catch {
         window.__wealthos_admin_token__ = null;
@@ -24,6 +24,12 @@ export function AuthProvider({ children }) {
         setLoading(false);
       }
     })();
+
+    // When the interceptor detects a session expiry mid-session, it fires this
+    // event instead of doing a hard page reload — React Router handles the redirect.
+    const handler = () => setUser(null);
+    window.addEventListener("admin:session-expired", handler);
+    return () => window.removeEventListener("admin:session-expired", handler);
   }, []);
 
   async function login(email, password) {
